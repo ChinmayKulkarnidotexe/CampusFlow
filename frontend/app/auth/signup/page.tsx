@@ -69,10 +69,10 @@ export default function SignupPage() {
     <div className="min-h-screen flex flex-col font-sans bg-transparent">
       <Navbar />
 
-      <main className="flex-1 flex items-center justify-center px-6 md:px-12 py-32 mt-12 w-full">
+      <main className="flex-1 flex items-center justify-center px-4 sm:px-6 md:px-12 py-24 md:py-32 w-full">
         <div className="max-w-6xl w-full grid lg:grid-cols-[1fr_1.1fr] gap-16 xl:gap-24 items-start">
           {/* Form Side */}
-          <div className="w-full max-w-md mx-auto lg:max-w-none space-y-8 animate-slide-in-left">
+          <div className="w-full max-w-md mx-auto lg:max-w-none space-y-8 animate-slide-in-left px-2 sm:px-0">
             <div className="space-y-4">
               <div className="inline-block px-4 py-1.5 rounded-full bg-[#f0b8a8]/30 dark:bg-[#3a1520] text-[#ef6751] text-xs font-bold uppercase tracking-widest mb-2">Register</div>
               <h1 className="text-4xl md:text-5xl font-bold text-[#703e2d] dark:text-[#eed9d6] tracking-tight leading-tight">
@@ -84,7 +84,7 @@ export default function SignupPage() {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-7">
               {errors.general && (
                 <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 text-red-600 dark:text-red-300 font-medium text-sm">
                   {errors.general}
@@ -170,7 +170,7 @@ export default function SignupPage() {
               <div className="pt-4">
                 <button
                   type="submit" disabled={isLoading}
-                  className="w-full py-5 px-8 rounded-full bg-[#ef6751] hover:bg-[#d3513e] disabled:opacity-70 disabled:cursor-not-allowed text-white font-bold text-lg transition-all duration-300 hover:shadow-xl hover:shadow-[#ef6751]/25 hover:-translate-y-0.5 flex items-center justify-center gap-2"
+                  className="w-full py-5 sm:py-6 px-10 rounded-full bg-[#ef6751] hover:bg-[#d3513e] disabled:opacity-70 disabled:cursor-not-allowed text-white font-bold text-lg transition-all duration-300 hover:shadow-xl hover:shadow-[#ef6751]/25 hover:-translate-y-0.5 flex items-center justify-center gap-2"
                 >
                   {isLoading ? 'Creating Account...' : 'Join CampusFlow'}
                   {!isLoading && <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>}
@@ -190,7 +190,7 @@ export default function SignupPage() {
 
           {/* Decorative Side */}
           <div className="hidden lg:block animate-slide-in-right h-full sticky top-32">
-            <div className="relative overflow-hidden rounded-[2.5rem] shadow-2xl flex flex-col justify-between py-12 px-10">
+            <div className="relative overflow-hidden rounded-[2.5rem] shadow-2xl flex flex-col justify-between py-16 px-12">
               <div className="absolute inset-0 bg-gradient-to-br from-[#fdf0ee] to-[#eed9d6] dark:from-[#1f0a12] dark:to-[#140108]" />
               <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9IndoaXRlIi8+PC9zdmc+')] bg-repeat opacity-10 dark:opacity-5" />
               <div className="absolute -top-32 -right-32 w-96 h-96 bg-[#ef6751]/30 dark:bg-[#ef6751]/20 rounded-full blur-[100px]" />

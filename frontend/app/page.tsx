@@ -8,6 +8,7 @@ export default function LandingPage() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
@@ -103,35 +104,27 @@ export default function LandingPage() {
 
         <div className="max-w-4xl mx-auto flex flex-col items-center justify-center text-center">
           <div className={`space-y-10 transition-all duration-700 flex flex-col items-center ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-            <div className="inline-flex items-center justify-center gap-3 px-6 py-2.5 rounded-full bg-white/70 dark:bg-[#1f0a12]/70 border border-[#f0b8a8] dark:border-[#3a1520] shadow-sm">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ef6751] opacity-75" />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#ef6751]" />
-              </span>
-              <span className="text-sm font-semibold text-[#ef6751]">New: Online Resource Booking Available</span>
-            </div>
-
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-[#703e2d] dark:text-[#eed9d6] leading-tight max-w-4xl mx-auto">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-[#703e2d] dark:text-[#eed9d6] leading-tight max-w-4xl mx-auto px-2 sm:px-0">
               Streamline Your<br className="hidden md:block" />{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ef6751] to-[#d3513e]">
+              <span className="text-transparent bg-clip-text bg-linear-to-r from-[#ef6751] to-[#d3513e]">
                 College Journey
               </span>
             </h1>
 
-            <p className="text-lg md:text-xl text-[#8b5e4d] dark:text-[#c49a92] max-w-2xl mx-auto leading-relaxed">
+            <p className="text-base sm:text-lg md:text-xl text-[#8b5e4d] dark:text-[#c49a92] max-w-2xl mx-auto leading-relaxed px-4 sm:px-0">
               Book labs, equipment, and classrooms with ease. CampusFlow connects you with all the resources you need for academic success in one centralized platform.
             </p>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-5 pt-4 w-full">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-5 pt-6 w-full px-4 sm:px-0">
               <Link
                 href="/auth/signup"
-                className="w-full sm:w-auto px-10 py-5 rounded-full bg-[#ef6751] hover:bg-[#d3513e] text-white font-bold text-lg transition-all duration-300 hover:shadow-2xl hover:shadow-[#ef6751]/30 hover:scale-105 text-center"
+                className="w-full sm:w-auto px-10 py-5 sm:px-12 sm:py-6 rounded-full bg-[#ef6751] hover:bg-[#d3513e] text-white font-bold text-lg sm:text-xl transition-all duration-300 hover:shadow-2xl hover:shadow-[#ef6751]/30 hover:scale-105 text-center"
               >
                 Get Started Free
               </Link>
               <Link
                 href="/auth/signin"
-                className="w-full sm:w-auto px-10 py-5 rounded-full bg-white dark:bg-[#1f0a12] border-2 border-[#f0b8a8] dark:border-[#3a1520] text-[#ef6751] hover:bg-[#fdf0ee] dark:hover:bg-[#3a1520] font-bold text-lg transition-all duration-300 hover:shadow-lg text-center"
+                className="w-full sm:w-auto px-10 py-5 sm:px-12 sm:py-6 rounded-full bg-white dark:bg-[#1f0a12] border-2 border-[#f0b8a8] dark:border-[#3a1520] text-[#ef6751] hover:bg-[#fdf0ee] dark:hover:bg-[#3a1520] font-bold text-lg sm:text-xl transition-all duration-300 hover:shadow-lg text-center"
               >
                 Sign In
               </Link>
@@ -189,21 +182,21 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-10">
             {resources.map((resource) => (
-              <div key={resource.id} className="card group hover:shadow-2xl flex flex-col items-center text-center p-10">
-                <div className="w-20 h-20 rounded-3xl mb-8 flex items-center justify-center bg-[#fdf0ee] dark:bg-[#3a1520] text-[#ef6751] transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3 shadow-md">
+              <div key={resource.id} className="card group hover:shadow-2xl flex flex-col items-center text-center p-12 md:p-14">
+                <div className="w-24 h-24 rounded-3xl mb-8 flex items-center justify-center bg-[#fdf0ee] dark:bg-[#3a1520] text-[#ef6751] transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3 shadow-md">
                   {resource.icon}
                 </div>
                 <h3 className="text-2xl font-bold text-[#703e2d] dark:text-[#eed9d6] mb-4 group-hover:text-[#ef6751] transition-colors">
                   {resource.title}
                 </h3>
-                <p className="text-[#8b5e4d] dark:text-[#c49a92] text-base leading-relaxed mb-8 flex-1">
+                <p className="text-[#8b5e4d] dark:text-[#c49a92] text-base md:text-lg leading-relaxed mb-10 flex-1">
                   {resource.description}
                 </p>
-                <Link href="/resources" className="px-6 py-3 rounded-full bg-[#eed9d6]/50 dark:bg-[#140108] text-[#ef6751] font-bold text-sm inline-flex items-center gap-2 hover:bg-[#ef6751] hover:text-white transition-all">
+                <Link href="/resources" className="px-8 py-4 rounded-full bg-[#eed9d6]/50 dark:bg-[#140108] text-[#ef6751] font-bold text-sm md:text-base inline-flex items-center gap-2 hover:bg-[#ef6751] hover:text-white transition-all">
                   Book Now
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
                 </Link>
               </div>
             ))}
@@ -212,24 +205,24 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-32 px-6 flex flex-col items-center">
+      <section className="py-32 px-4 sm:px-6 flex flex-col items-center">
         <div className="max-w-5xl mx-auto w-full">
-          <div className="relative overflow-hidden rounded-[3rem] bg-gradient-to-br from-[#ef6751] to-[#d3513e] p-16 md:p-24 text-center shadow-2xl shadow-[#ef6751]/20">
+          <div className="relative overflow-hidden rounded-[3rem] bg-gradient-to-br from-[#ef6751] to-[#d3513e] p-12 sm:p-20 md:p-32 text-center shadow-2xl shadow-[#ef6751]/20">
             <div className="absolute inset-0 opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9IndoaXRlIi8+PC9zdmc+')] bg-repeat" />
             <div className="absolute top-0 left-0 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
             <div className="absolute bottom-0 right-0 w-64 h-64 bg-black opacity-10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
             <div className="relative z-10 flex flex-col items-center">
-              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-8 leading-tight">
-                Ready to Streamline Your<br />Academic Journey?
+              <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-8 leading-tight">
+                Ready to Streamline Your<br className="hidden sm:block" /> Academic Journey?
               </h2>
-              <p className="text-white/90 text-xl md:text-2xl mb-12 max-w-3xl mx-auto font-medium">
+              <p className="text-white/90 text-lg sm:text-xl md:text-2xl mb-14 max-w-3xl mx-auto font-medium px-2 sm:px-0">
                 Join thousands of students who use CampusFlow to manage their college resources instantly and efficiently.
               </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-6 w-full">
-                <Link href="/auth/signup" className="w-full sm:w-auto px-12 py-5 rounded-full bg-white text-[#ef6751] font-bold text-xl hover:bg-[#fdf0ee] transition-all hover:shadow-2xl hover:scale-105">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-6 w-full px-2 sm:px-0">
+                <Link href="/auth/signup" className="w-full sm:w-auto px-10 py-5 sm:px-14 sm:py-6 rounded-full bg-white text-[#ef6751] font-bold text-lg sm:text-xl hover:bg-[#fdf0ee] transition-all hover:shadow-2xl hover:scale-105">
                   Create Free Account
                 </Link>
-                <Link href="/resources" className="w-full sm:w-auto px-12 py-5 rounded-full border-2 border-white/80 text-white font-bold text-xl hover:bg-white/10 hover:border-white transition-all">
+                <Link href="/resources" className="w-full sm:w-auto px-10 py-5 sm:px-14 sm:py-6 rounded-full border-2 border-white/80 text-white font-bold text-lg sm:text-xl hover:bg-white/10 hover:border-white transition-all">
                   Explore Resources
                 </Link>
               </div>

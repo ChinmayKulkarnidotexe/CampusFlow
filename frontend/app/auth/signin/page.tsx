@@ -65,10 +65,10 @@ export default function SigninPage() {
     <div className="min-h-screen flex flex-col font-sans bg-transparent">
       <Navbar />
 
-      <main className="flex-1 flex items-center justify-center px-6 md:px-12 py-32 mt-12 w-full">
+      <main className="flex-1 flex items-center justify-center px-4 sm:px-6 md:px-12 py-24 md:py-32 w-full">
         <div className="max-w-6xl w-full grid lg:grid-cols-[1fr_1.1fr] gap-16 xl:gap-24 items-center">
           {/* Form Side - Left padding and margin adjustments */}
-          <div className="w-full max-w-md mx-auto lg:max-w-none space-y-10 animate-slide-in-left">
+          <div className="w-full max-w-md mx-auto lg:max-w-none space-y-10 animate-slide-in-left px-2 sm:px-0">
             <div className="space-y-4">
               <div className="inline-block px-4 py-1.5 rounded-full bg-[#f0b8a8]/30 dark:bg-[#3a1520] text-[#ef6751] text-xs font-bold uppercase tracking-widest mb-2">Login</div>
               <h1 className="text-4xl md:text-5xl font-bold text-[#703e2d] dark:text-[#eed9d6] tracking-tight leading-tight">
@@ -80,7 +80,7 @@ export default function SigninPage() {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
               {errors.general && (
                 <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 text-red-600 dark:text-red-300 font-medium">
                   {errors.general}
@@ -150,7 +150,7 @@ export default function SigninPage() {
               <div className="pt-2">
                 <button
                   type="submit" disabled={isLoading}
-                  className="w-full py-5 px-8 rounded-full bg-[#ef6751] hover:bg-[#d3513e] disabled:opacity-70 disabled:cursor-not-allowed text-white font-bold text-lg transition-all duration-300 hover:shadow-xl hover:shadow-[#ef6751]/25 hover:-translate-y-0.5 flex items-center justify-center gap-2"
+                  className="w-full py-5 sm:py-6 px-10 rounded-full bg-[#ef6751] hover:bg-[#d3513e] disabled:opacity-70 disabled:cursor-not-allowed text-white font-bold text-lg transition-all duration-300 hover:shadow-xl hover:shadow-[#ef6751]/25 hover:-translate-y-0.5 flex items-center justify-center gap-2"
                 >
                   {isLoading ? 'Authenticating...' : 'Secure Sign In'}
                   {!isLoading && <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>}
@@ -176,10 +176,10 @@ export default function SigninPage() {
               <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-[#ef6751]/20 to-transparent rounded-full blur-3xl" />
               <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-[#d3513e]/20 to-transparent rounded-full blur-3xl" />
               
-              <div className="relative z-10 p-12 flex flex-col h-full justify-between">
+              <div className="relative z-10 p-16 flex flex-col h-full justify-between">
                 <div>
-                  <h3 className="text-3xl font-bold text-[#703e2d] dark:text-[#eed9d6] mb-4 text-center">Your Academic Ecosystem</h3>
-                  <p className="text-center text-[#8b5e4d] dark:text-[#c49a92] text-lg font-medium mb-12">All resources synced in real-time.</p>
+                  <h3 className="text-4xl font-bold text-[#703e2d] dark:text-[#eed9d6] mb-6 text-center">Your Academic Ecosystem</h3>
+                  <p className="text-center text-[#8b5e4d] dark:text-[#c49a92] text-xl font-medium mb-16">All resources synced in real-time.</p>
                   
                   <div className="grid grid-cols-2 gap-6">
                     {[
