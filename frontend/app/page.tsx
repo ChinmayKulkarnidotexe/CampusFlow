@@ -205,7 +205,7 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-32 px-4 sm:px-6 flex flex-col items-center">
+      <section className="py-16 px-4 sm:px-6 flex flex-col items-center">
         <div className="max-w-5xl mx-auto w-full">
           <div className="relative overflow-hidden rounded-[3rem] bg-gradient-to-br from-[#ef6751] to-[#d3513e] p-12 sm:p-20 md:p-32 text-center shadow-2xl shadow-[#ef6751]/20">
             <div className="absolute inset-0 opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9IndoaXRlIi8+PC9zdmc+')] bg-repeat" />
