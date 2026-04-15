@@ -3,106 +3,127 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
+import { useAuth } from '@/hooks/authContext';
+import { PhysicalResource, resourceApi, bookingApi, CreateBookingRequest } from '@/app/lib/api';
 
-// Mock data for resources
-const resources = [
-  {
-    id: 1,
-    name: 'Physics Laboratory A',
-    category: 'Laboratory',
-    capacity: '30 students',
-    equipment: ['Oscilloscopes', 'Multimeters', 'Power Supplies', 'Breadboards'],
-    price: '$25/hour',
-    availability: ['Mon 9AM-12PM', 'Wed 2PM-5PM', 'Fri 10AM-1PM'],
-    image: 'lab',
-    status: 'available',
-  },
-  {
-    id: 2,
-    name: 'Computer Science Lab',
-    category: 'Laboratory',
-    capacity: '40 students',
-    equipment: ['High-end PCs', 'Graphics Cards', 'Network Switches', 'Servers'],
-    price: '$30/hour',
-    availability: ['Tue 9AM-12PM', 'Thu 1PM-4PM', 'Sat 10AM-2PM'],
-    image: 'computer',
-    status: 'available',
-  },
-  {
-    id: 3,
-    name: '3D Printer Kit',
-    category: 'Equipment',
-    capacity: '1 person',
-    equipment: ['Prusa i3 MK3S', 'Filament Spools', 'Calibration Tools'],
-    price: '$15/hour',
-    availability: ['Daily 8AM-10PM'],
-    image: 'equipment',
-    status: 'maintenance',
-  },
-  {
-    id: 4,
-    name: 'Electronics Workstation',
-    category: 'Equipment',
-    capacity: '2 people',
-    equipment: ['Soldering Stations', 'Power Supplies', 'Logic Analyzers', 'Bench Tools'],
-    price: '$20/hour',
-    availability: ['Mon-Fri 9AM-6PM'],
-    image: 'electronics',
-    status: 'available',
-  },
-  {
-    id: 5,
-    name: 'Study Room 101',
-    category: 'Classroom',
-    capacity: '6 people',
-    equipment: ['Whiteboard', 'Projector', 'Conferencing System'],
-    price: '$10/hour',
-    availability: ['Daily 8AM-10PM'],
-    image: 'classroom',
-    status: 'available',
-  },
-  {
-    id: 6,
-    name: 'Group Study Pod',
-    category: 'Classroom',
-    capacity: '4 people',
-    equipment: ['Smart Display', 'Whiteboard', 'Comfortable Seating'],
-    price: '$8/hour',
-    availability: ['Mon-Fri 10AM-8PM'],
-    image: 'pod',
-    status: 'booked',
-  },
-];
+// Convert backend resource type to frontend category
+const mapResourceTypeToCategory = (resourceType: string): string => {
+  const typeMap: Record<string, string> = {
+    computer_lab: 'Laboratory',
+    science_lab: 'Laboratory',
+    laboratory: 'Laboratory',
+    lecture_hall: 'Classroom',
+    classroom: 'Classroom',
+    seminar_room: 'Classroom',
+    auditorium: 'Classroom',
+    equipment: 'Equipment',
+  };
+  return typeMap[resourceType] || 'Classroom';
+};
 
-const categories = ['All', 'Laboratory', 'Equipment', 'Classroom'];
+function calculateDuration(start: string, end: string): number {
+  if (!start || !end) return 0;
+  const startDate = new Date(`2000-01-01T${start}`);
+  const endDate = new Date(`2000-01-01T${end}`);
+  const diffMs = endDate.getTime() - startDate.getTime();
+  const diffHours = diffMs / (1000 * 60 * 60);
+  return Math.max(1, Math.round(diffHours));
+}
 
 export default function DashboardPage() {
+  const { user, accessToken, isAuthenticated, isLoading: authLoading, refreshToken } = useAuth();
   const [activeCategory, setActiveCategory] = useState('All');
-  const [bookingModal, setBookingModal] = useState<{ show: boolean; resource?: typeof resources[0] }>({ show: false });
-  const [bookingDetails, setBookingDetails] = useState({ date: '', time: '', duration: '1' });
+  const [resources, setResources] = useState<PhysicalResource[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [bookingModal, setBookingModal] = useState<{ show: boolean; resource?: PhysicalResource }>({ show: false });
+  const [bookingDetails, setBookingDetails] = useState({ date: '', startTime: '09:00', endTime: '10:00' });
   const [isBooking, setIsBooking] = useState(false);
+
+  // Fetch resources on mount
+  useEffect(() => {
+    const fetchResources = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await resourceApi.listResources();
+        setResources(data.resources || []);
+      } catch (err: any) {
+        setError('Failed to load resources. Please try again.');
+        console.error('Error fetching resources:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchResources();
+  }, []);
 
   const filteredResources = activeCategory === 'All'
     ? resources
-    : resources.filter((r) => r.category === activeCategory);
+    : resources.filter((r) => mapResourceTypeToCategory(r.resource_type) === activeCategory);
 
-  const handleBook = (resource: typeof resources[0]) => {
+  const handleBook = (resource: PhysicalResource) => {
     setBookingModal({ show: true, resource });
   };
 
   const handleSubmitBooking = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!accessToken) {
+      setError('Please sign in to make a booking');
+      return;
+    }
+
     setIsBooking(true);
+    setError(null);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      setIsBooking(false);
+      // Parse date and time to create ISO strings
+      const startDateTime = new Date(`${bookingDetails.date}T${bookingDetails.startTime}`);
+      const endDateTime = new Date(`${bookingDetails.date}T${bookingDetails.endTime}`);
+
+      // Add 1 hour if end time is same or earlier than start time (simple logic)
+      if (endDateTime <= startDateTime) {
+        endDateTime.setHours(startDateTime.getHours() + 1);
+      }
+
+      const formatNaive = (d: Date) => {
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
+      };
+
+      const bookingData: CreateBookingRequest = {
+        resource_id: bookingModal.resource!.resource_id,
+        start_time: formatNaive(startDateTime),
+        end_time: formatNaive(endDateTime),
+        purpose: `Booking for ${mapResourceTypeToCategory(bookingModal.resource!.resource_type)}`,
+      };
+
+      const data = await bookingApi.createBooking(bookingData, accessToken);
+
+      // Refresh resources after booking
+      const updatedResources = await resourceApi.listResources();
+      setResources(updatedResources.resources || []);
+
       setBookingModal({ show: false });
+      setBookingDetails({ date: '', startTime: '09:00', endTime: '10:00' });
       alert('Booking confirmed! Check your email for details.');
-    } catch {
+    } catch (err: any) {
+      setError(err.message || 'Failed to create booking');
+      console.error('Booking error:', err);
+    } finally {
       setIsBooking(false);
     }
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ef6751]"></div>
+      </div>
+    );
+  }
+
+  const categories = ['All', 'Laboratory', 'Equipment', 'Classroom'];
 
   return (
     <div className="min-h-screen font-sans bg-[#f8f0e8] dark:bg-[#1e2a25]">
@@ -118,8 +139,10 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center gap-4 bg-white/20 dark:bg-black/20 backdrop-blur-md px-6 py-3 rounded-2xl">
               <div className="text-right">
-                <div className="text-3xl font-bold">5</div>
-                <div className="text-sm opacity-90">Active Bookings</div>
+                <div className="text-3xl font-bold">
+                  {resources.filter(r => r.status === 'available').length}
+                </div>
+                <div className="text-sm opacity-90">Available Resources</div>
               </div>
               <div className="w-12 h-12 rounded-full bg-white/30 flex items-center justify-center">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
@@ -156,6 +179,23 @@ export default function DashboardPage() {
           ))}
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 bg-[#D3513E]/10 border border-[#D3513E]/30 rounded-xl">
+            <div className="flex items-start gap-3">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D3513E" strokeWidth="2" className="mt-1 flex-shrink-0">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <div>
+                <h4 className="font-bold text-[#D3513E] mb-1">Error</h4>
+                <p className="text-[#8b5e4d] dark:text-[#a8cbb8] text-sm">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Filters */}
         <div className="flex flex-wrap items-center justify-between gap-6 mb-10">
           <div>
@@ -180,81 +220,86 @@ export default function DashboardPage() {
         </div>
 
         {/* Resources Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredResources.map((resource) => (
-            <div
-              key={resource.id}
-              className="group bg-white dark:bg-[#26352f] rounded-2xl border border-[#f0b8a8]/40 dark:border-[#344840]/40 overflow-hidden hover:shadow-xl hover:border-[#ef6751]/50 dark:hover:border-[#ef6751]/50 transition-all duration-300"
-            >
-              {/* Header */}
-              <div className="p-6 border-b border-[#f0b8a8]/30 dark:border-[#344840]/30">
-                <div className="flex items-center justify-between mb-3">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                    resource.category === 'Laboratory' ? 'bg-[#f0b8a8] text-[#703e2d]' :
-                    resource.category === 'Equipment' ? 'bg-[#d3513e]/20 text-[#d3513e]' :
-                    'bg-[#344840]/20 text-[#344840]'
-                  }`}>
-                    {resource.category}
-                  </span>
-                  <span className={`text-sm font-medium ${
-                    resource.status === 'available' ? 'text-[#84AE92]' :
-                    resource.status === 'maintenance' ? 'text-[#d3513e]' : 'text-[#8b5e4d]'
-                  }`}>
-                    {resource.status === 'available' ? 'Available' : resource.status === 'maintenance' ? 'Maintenance' : 'Booked'}
-                  </span>
-                </div>
-                <h3 className="text-xl font-bold text-[#703e2d] dark:text-[#e8f2ea] mb-1">{resource.name}</h3>
-                <p className="text-[#8b5e4d] dark:text-[#a8cbb8] text-sm">{resource.capacity} • {resource.price}</p>
-              </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ef6751]"></div>
+          </div>
+        ) : filteredResources.length === 0 ? (
+          <div className="text-center py-20">
+            <h3 className="text-xl font-bold text-[#703e2d] dark:text-[#e8f2ea] mb-2">No resources found</h3>
+            <p className="text-[#8b5e4d] dark:text-[#a8cbb8]">Try adjusting your filter or check back later</p>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {filteredResources.map((resource) => {
+              const category = mapResourceTypeToCategory(resource.resource_type);
+              const status = resource.status;
 
-              {/* Content */}
-              <div className="p-6 space-y-4">
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#8b5e4d] dark:text-[#a8cbb8] mb-2">Equipment</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {resource.equipment.slice(0, 3).map((eq, idx) => (
-                      <span key={idx} className="px-2 py-1 bg-[#f0b8a8]/20 dark:bg-[#344840]/30 text-[#8b5e4d] dark:text-[#a8cbb8] text-xs rounded">
-                        {eq}
-                      </span>
-                    ))}
-                    {resource.equipment.length > 3 && (
-                      <span className="px-2 py-1 bg-[#f0b8a8]/10 dark:bg-[#344840]/20 text-[#8b5e4d] dark:text-[#a8cbb8] text-xs rounded">
-                        +{resource.equipment.length - 3} more
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#8b5e4d] dark:text-[#a8cbb8] mb-2">Available Times</h4>
-                  <div className="text-sm text-[#703e2d] dark:text-[#e8f2ea]">
-                    {resource.availability.slice(0, 2).join(', ')}
-                    {resource.availability.length > 2 && '...'}
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => handleBook(resource)}
-                  disabled={resource.status !== 'available'}
-                  className={`w-full py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
-                    resource.status === 'available'
-                      ? 'bg-[#ef6751] hover:bg-[#d3513e] text-white shadow-lg shadow-[#ef6751]/20 hover:shadow-[#ef6751]/30'
-                      : 'bg-[#f0b8a8]/20 dark:bg-[#344840]/20 text-[#8b5e4d] dark:text-[#a8cbb8] cursor-not-allowed'
-                  }`}
+              return (
+                <div
+                  key={resource.resource_id}
+                  className="group bg-white dark:bg-[#26352f] rounded-2xl border border-[#f0b8a8]/40 dark:border-[#344840]/40 overflow-hidden hover:shadow-xl hover:border-[#ef6751]/50 dark:hover:border-[#ef6751]/50 transition-all duration-300"
                 >
-                  {resource.status === 'available' ? (
-                    <>
-                      Book Now
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
-                    </>
-                  ) : (
-                    resource.status === 'maintenance' ? 'Under Maintenance' : 'Already Booked'
-                  )}
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+                  {/* Header */}
+                  <div className="p-6 border-b border-[#f0b8a8]/30 dark:border-[#344840]/30">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                        category === 'Laboratory' ? 'bg-[#f0b8a8] text-[#703e2d]' :
+                        category === 'Equipment' ? 'bg-[#d3513e]/20 text-[#d3513e]' :
+                        'bg-[#344840]/20 text-[#344840]'
+                      }`}>
+                        {category}
+                      </span>
+                      <span className={`text-sm font-medium ${
+                        status === 'available' ? 'text-[#84AE92]' :
+                        status === 'maintenance' ? 'text-[#d3513e]' : 'text-[#8b5e4d]'
+                      }`}>
+                        {status === 'available' ? 'Available' : status === 'maintenance' ? 'Maintenance' : 'Booked'}
+                      </span>
+                    </div>
+                    <h3 className="text-xl font-bold text-[#703e2d] dark:text-[#e8f2ea] mb-1">{resource.resource_name}</h3>
+                    <p className="text-[#8b5e4d] dark:text-[#a8cbb8] text-sm">{resource.capacity} capacity • {resource.location}</p>
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-6 space-y-4">
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#8b5e4d] dark:text-[#a8cbb8] mb-2">Facilities</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {resource.has_projector && <span className="px-2 py-1 bg-[#f0b8a8]/20 dark:bg-[#344840]/30 text-[#8b5e4d] dark:text-[#a8cbb8] text-xs rounded">Projector</span>}
+                        {resource.has_ac && <span className="px-2 py-1 bg-[#f0b8a8]/20 dark:bg-[#344840]/30 text-[#8b5e4d] dark:text-[#a8cbb8] text-xs rounded">AC</span>}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#8b5e4d] dark:text-[#a8cbb8] mb-2">Status</h4>
+                      <div className="text-sm text-[#703e2d] dark:text-[#e8f2ea]">
+                        {resource.status === 'available' ? 'Ready for booking' : resource.status}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => handleBook(resource)}
+                      disabled={status !== 'available'}
+                      className={`w-full py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
+                        status === 'available'
+                          ? 'bg-[#ef6751] hover:bg-[#d3513e] text-white shadow-lg shadow-[#ef6751]/20 hover:shadow-[#ef6751]/30'
+                          : 'bg-[#f0b8a8]/20 dark:bg-[#344840]/20 text-[#8b5e4d] dark:text-[#a8cbb8] cursor-not-allowed'
+                      }`}
+                    >
+                      {status === 'available' ? (
+                        <>
+                          Book Now
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+                        </>
+                      ) : status === 'maintenance' ? 'Under Maintenance' : 'Already Booked'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </main>
 
       {/* Booking Modal */}
@@ -273,8 +318,8 @@ export default function DashboardPage() {
               </div>
 
               <div className="mb-6 p-4 bg-[#f0b8a8]/20 dark:bg-[#344840]/30 rounded-xl">
-                <h4 className="font-bold text-[#703e2d] dark:text-[#e8f2ea] mb-1">{bookingModal.resource.name}</h4>
-                <p className="text-[#8b5e4d] dark:text-[#a8cbb8] text-sm">{bookingModal.resource.category}</p>
+                <h4 className="font-bold text-[#703e2d] dark:text-[#e8f2ea] mb-1">{bookingModal.resource.resource_name}</h4>
+                <p className="text-[#8b5e4d] dark:text-[#a8cbb8] text-sm">{mapResourceTypeToCategory(bookingModal.resource.resource_type)}</p>
               </div>
 
               <form onSubmit={handleSubmitBooking} className="space-y-5">
@@ -289,46 +334,38 @@ export default function DashboardPage() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-bold text-[#703e2d] dark:text-[#e8f2ea] mb-2">Select Time</label>
-                  <select
-                    required
-                    className="w-full px-4 py-3 rounded-xl bg-[#f8f0e8] dark:bg-[#1e2a25] border border-[#f0b8a8] dark:border-[#344840] text-[#703e2d] dark:text-[#e8f2ea] focus:ring-2 focus:ring-[#ef6751] focus:border-transparent outline-none transition-all"
-                    value={bookingDetails.time}
-                    onChange={(e) => setBookingDetails({ ...bookingDetails, time: e.target.value })}
-                  >
-                    <option value="">Choose a time slot...</option>
-                    {bookingModal.resource.availability.map((time, idx) => (
-                      <option key={idx} value={time}>
-                        {time}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold text-[#703e2d] dark:text-[#e8f2ea] mb-2">Duration (hours)</label>
-                  <select
-                    required
-                    className="w-full px-4 py-3 rounded-xl bg-[#f8f0e8] dark:bg-[#1e2a25] border border-[#f0b8a8] dark:border-[#344840] text-[#703e2d] dark:text-[#e8f2ea] focus:ring-2 focus:ring-[#ef6751] focus:border-transparent outline-none transition-all"
-                    value={bookingDetails.duration}
-                    onChange={(e) => setBookingDetails({ ...bookingDetails, duration: e.target.value })}
-                  >
-                    {[1, 2, 3, 4, 5, 6].map((h) => (
-                      <option key={h} value={h}>{h} hour{h > 1 ? 's' : ''}</option>
-                    ))}
-                  </select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-bold text-[#703e2d] dark:text-[#e8f2ea] mb-2">Start Time</label>
+                    <input
+                      type="time"
+                      required
+                      className="w-full px-4 py-3 rounded-xl bg-[#f8f0e8] dark:bg-[#1e2a25] border border-[#f0b8a8] dark:border-[#344840] text-[#703e2d] dark:text-[#e8f2ea] focus:ring-2 focus:ring-[#ef6751] focus:border-transparent outline-none transition-all"
+                      value={bookingDetails.startTime}
+                      onChange={(e) => setBookingDetails({ ...bookingDetails, startTime: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-[#703e2d] dark:text-[#e8f2ea] mb-2">End Time</label>
+                    <input
+                      type="time"
+                      required
+                      className="w-full px-4 py-3 rounded-xl bg-[#f8f0e8] dark:bg-[#1e2a25] border border-[#f0b8a8] dark:border-[#344840] text-[#703e2d] dark:text-[#e8f2ea] focus:ring-2 focus:ring-[#ef6751] focus:border-transparent outline-none transition-all"
+                      value={bookingDetails.endTime}
+                      onChange={(e) => setBookingDetails({ ...bookingDetails, endTime: e.target.value })}
+                    />
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between pt-4 border-t border-[#f0b8a8]/30 dark:border-[#344840]/30">
                   <div className="text-sm text-[#8b5e4d] dark:text-[#a8cbb8]">
-                    Total: <span className="font-bold text-[#ef6751]">
-                      ${(Number(bookingModal.resource.price.replace('$', '').replace('/hour', '')) * Number(bookingDetails.duration)).toFixed(2)}
+                    Duration: <span className="font-bold text-[#ef6751]">
+                      {calculateDuration(bookingDetails.startTime, bookingDetails.endTime)} hours
                     </span>
                   </div>
                   <button
                     type="submit"
-                    disabled={isBooking}
+                    disabled={isBooking || !bookingDetails.date || !bookingDetails.startTime || !bookingDetails.endTime}
                     className="px-8 py-3 bg-[#ef6751] hover:bg-[#d3513e] text-white font-bold rounded-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed"
                   >
                     {isBooking ? 'Booking...' : 'Confirm Booking'}

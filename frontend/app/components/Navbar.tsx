@@ -3,10 +3,12 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import ThemeToggle from './ThemeToggle';
+import { useAuth } from '@/hooks/authContext';
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user, isAuthenticated, isAdmin, logout } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -22,6 +24,11 @@ export default function Navbar() {
     { name: 'About', href: '#about' },
     { name: 'Contact', href: '#contact' },
   ];
+
+  const handleLogout = () => {
+    logout();
+    setIsMobileMenuOpen(false);
+  };
 
   return (
     <nav
@@ -62,12 +69,37 @@ export default function Navbar() {
         {/* Right Actions (Desktop) */}
         <div className="hidden md:flex items-center gap-6 z-10">
           <ThemeToggle />
-          <Link
-            href="/auth/signin"
-            className="px-8 py-3.5 rounded-full bg-[#ef6751] hover:bg-[#d3513e] text-white font-semibold text-base transition-all duration-300 hover:shadow-xl hover:shadow-[#ef6751]/20 hover:scale-105"
-          >
-            Sign In
-          </Link>
+          {isAuthenticated ? (
+            <div className="flex items-center gap-4">
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className="px-6 py-3.5 rounded-full bg-[#ef6751]/10 hover:bg-[#ef6751]/20 text-[#ef6751] font-semibold text-base transition-all duration-200"
+                >
+                  Admin
+                </Link>
+              )}
+              <Link
+                href="/dashboard"
+                className="px-6 py-3.5 rounded-full bg-[#ef6751] hover:bg-[#d3513e] text-white font-semibold text-base transition-all duration-200 hover:shadow-xl hover:shadow-[#ef6751]/20"
+              >
+                Dashboard
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="px-6 py-3.5 rounded-full hover:bg-[#f0b8a8] dark:hover:bg-[#3a1520] text-[#703e2d] dark:text-[#c49a92] font-semibold text-base transition-all duration-200"
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <Link
+              href="/auth/signin"
+              className="px-8 py-3.5 rounded-full bg-[#ef6751] hover:bg-[#d3513e] text-white font-semibold text-base transition-all duration-200 hover:shadow-xl hover:shadow-[#ef6751]/20 hover:scale-105"
+            >
+              Sign In
+            </Link>
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -89,7 +121,7 @@ export default function Navbar() {
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
         <div className="md:hidden absolute top-full left-0 right-0 bg-white dark:bg-[#140108] border-b border-[#f0b8a8] dark:border-[#3a1520] shadow-2xl animate-fade-in">
-          <div className="flex flex-col p-8 gap-4 text-center">
+          <div className="flex flex-col p-8 gap-6 text-center">
             {navLinks.map((link) => (
               <Link
                 key={link.name}
@@ -100,16 +132,46 @@ export default function Navbar() {
                 {link.name}
               </Link>
             ))}
-            <div className="flex items-center justify-center gap-4 py-6 border-t border-[#f0b8a8] dark:border-[#3a1520]">
+
+            <div className="flex items-center justify-center gap-4 py-4 border-t border-[#f0b8a8] dark:border-[#3a1520]">
               <span className="text-[#703e2d] dark:text-[#c49a92] font-medium">Theme</span>
               <ThemeToggle />
             </div>
-            <Link
-              href="/auth/signin"
-              className="w-full text-center py-4 rounded-full bg-[#ef6751] hover:bg-[#d3513e] text-white font-bold text-lg transition-colors mt-2 shadow-lg"
-            >
-              Sign In
-            </Link>
+
+            {isAuthenticated ? (
+              <div className="flex flex-col gap-3">
+                {isAdmin && (
+                  <Link
+                    href="/admin"
+                    className="w-full text-center py-4 rounded-full bg-[#ef6751]/10 hover:bg-[#ef6751]/20 text-[#ef6751] font-bold text-lg transition-colors"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Admin Dashboard
+                  </Link>
+                )}
+                <Link
+                  href="/dashboard"
+                  className="w-full text-center py-4 rounded-full bg-[#ef6751] hover:bg-[#d3513e] text-white font-bold text-lg transition-colors shadow-lg"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  My Dashboard
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-center py-4 rounded-full hover:bg-[#f0b8a8] dark:hover:bg-[#3a1520] text-[#703e2d] dark:text-[#c49a92] font-bold text-lg transition-colors"
+                >
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/auth/signin"
+                className="w-full text-center py-4 rounded-full bg-[#ef6751] hover:bg-[#d3513e] text-white font-bold text-lg transition-colors shadow-lg"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Sign In
+              </Link>
+            )}
           </div>
         </div>
       )}

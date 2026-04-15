@@ -4,9 +4,11 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
+import { useAuth } from '@/hooks/authContext';
 
 export default function SignupPage() {
   const router = useRouter();
+  const { register } = useAuth();
   const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [errors, setErrors] = useState({ name: '', email: '', password: '', confirmPassword: '', general: '' });
   const [isLoading, setIsLoading] = useState(false);
@@ -41,10 +43,10 @@ export default function SignupPage() {
     if (!validateForm()) { setIsLoading(false); return; }
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      router.push('/dashboard');
-    } catch {
-      setErrors((prev) => ({ ...prev, general: 'Failed to create account. Please try again.' }));
+      await register(formData.name, formData.email, formData.password);
+      // Wait a bit to let context state update if necessary, though router is pushed inside register
+    } catch (err: any) {
+      setErrors((prev) => ({ ...prev, general: err.message || 'Failed to create account. Please try again.' }));
     } finally {
       setIsLoading(false);
     }

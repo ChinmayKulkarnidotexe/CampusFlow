@@ -97,7 +97,7 @@ impl SmtpMailer {
 </style></head>
 <body>
 <div class="container">
-    <div class="header"><h1>🔐 CampusFlow</h1></div>
+    <div class="header"><h1>CampusFlow</h1></div>
     <div class="body">
         <p>Your one-time verification code is:</p>
         <div class="otp-code">{otp_code}</div>
@@ -149,7 +149,7 @@ impl SmtpMailer {
 </style></head>
 <body>
 <div class="container">
-    <div class="header"><h1>✅ Login Successful</h1></div>
+    <div class="header"><h1>Login Successful</h1></div>
     <div class="body">
         <p>Hi <strong>{user_name}</strong>,</p>
         <p>You've successfully logged into <strong>CampusFlow</strong>.</p>

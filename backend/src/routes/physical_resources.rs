@@ -22,7 +22,6 @@ pub fn router() -> Router<Arc<AppState>> {
 
 async fn list_resources(
     State(state): State<Arc<AppState>>,
-    _auth: AuthUser,
     Query(params): Query<PhysicalResourceQuery>,
 ) -> Result<Json<Value>, AppError> {
     let resources = sqlx::query_as::<_, PhysicalResource>(
@@ -51,7 +50,6 @@ async fn list_resources(
 
 async fn get_resource(
     State(state): State<Arc<AppState>>,
-    _auth: AuthUser,
     Path(id): Path<i32>,
 ) -> Result<Json<Value>, AppError> {
     let resource = sqlx::query_as::<_, PhysicalResource>(

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Poppins } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "./hooks/useTheme";
+import { AuthProvider } from "./hooks/authContext";
 import LoadingProvider from "./components/LoadingProvider";
 
 const inter = Inter({
@@ -45,7 +46,9 @@ export default function RootLayout({
         className={`${inter.variable} ${poppins.variable} min-h-full flex flex-col font-sans antialiased`}
       >
         <ThemeProvider>
-          <LoadingProvider>{children}</LoadingProvider>
+          <AuthProvider>
+            <LoadingProvider>{children}</LoadingProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
