@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/hooks/authContext';
-import { bookingApi, Booking } from '@/app/lib/api';
+import { bookingApi, Booking, resourceApi } from '@/app/lib/api';
 
 interface BookingWithResource extends Booking {
   resource_name: string;
@@ -20,29 +20,38 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string 
 const STATUS_FILTERS = ['All', 'Pending', 'Approved', 'Rejected', 'Cancelled'];
 
 export default function BookingsPage() {
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, accessToken, isAuthenticated, isLoading: authLoading } = useAuth();
   const [bookings, setBookings] = useState<BookingWithResource[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState('All');
+  const [cancelBookingId, setCancelBookingId] = useState<number | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const fetchBookings = useCallback(async (filter: string = activeFilter) => {
     setLoading(true);
     setError(null);
 
     try {
-      if (!user?.accessToken) {
+      if (!accessToken) {
         setError('Authentication required. Please sign in.');
         setLoading(false);
         return;
       }
 
-      const data = await bookingApi.listBookings(user.accessToken);
+      const data = await bookingApi.listBookings(accessToken);
       const bookingList = data.bookings || [];
+
+      // Fetch resource names
+      let resourceMap = new Map<number, string>();
+      try {
+        const resData = await resourceApi.listResources();
+        resData.resources?.forEach(r => resourceMap.set(r.resource_id, r.resource_name));
+      } catch { /* ignore */ }
 
       const bookingsWithResource = bookingList.map((b) => ({
         ...b,
-        resource_name: `Resource #${b.resource_id}`,
+        resource_name: resourceMap.get(b.resource_id) || `Resource #${b.resource_id}`,
       }));
 
       setBookings(bookingsWithResource);
@@ -58,13 +67,34 @@ export default function BookingsPage() {
     } finally {
       setLoading(false);
     }
-  }, [activeFilter, user?.accessToken]);
+  }, [activeFilter, accessToken]);
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
       fetchBookings();
     }
   }, [fetchBookings, authLoading, isAuthenticated]);
+
+  const handleCancelBooking = async (bookingId: number) => {
+    setIsCancelling(true);
+    setError(null);
+    try {
+      await bookingApi.cancelBooking(bookingId, accessToken!);
+      fetchBookings();
+      setCancelBookingId(null);
+    } catch (err: any) {
+      if (err.message?.includes('401') || err.message?.includes('Unauthorized')) {
+        setError('Your session has expired. Please sign in again.');
+        setTimeout(() => {
+          window.location.href = '/auth/signin';
+        }, 2000);
+        return;
+      }
+      setError(err.message || 'An error occurred while cancelling the booking');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
   const handleFilterChange = (filter: string) => {
     setActiveFilter(filter);
@@ -207,6 +237,17 @@ export default function BookingsPage() {
                             {statusConfig.label}
                           </span>
                         </td>
+                        <td className="px-6 py-4">
+                          {booking.user_id === user?.user_id && (booking.booking_status.toLowerCase() === 'pending' || booking.booking_status.toLowerCase() === 'approved') && (
+                            <button
+                              onClick={() => setCancelBookingId(booking.booking_id)}
+                              disabled={isCancelling}
+                              className="px-3 py-1.5 rounded-lg bg-[#d3513e] hover:bg-[#c04633] text-white text-xs font-medium transition-colors disabled:opacity-70"
+                            >
+                              Cancel
+                            </button>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
@@ -241,6 +282,33 @@ export default function BookingsPage() {
             <button onClick={() => setActiveFilter('All')} className="mt-4 text-[#ef6751] hover:underline font-medium">
               View All Bookings
             </button>
+          </div>
+        )}
+
+        {/* Cancel Booking Confirmation Modal */}
+        {cancelBookingId && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white dark:bg-[#26352f] rounded-3xl max-w-md w-full shadow-2xl animate-slide-in-up p-8">
+              <h3 className="text-2xl font-bold text-[#703e2d] dark:text-[#e8f2ea] mb-4">Cancel Booking?</h3>
+              <p className="text-[#8b5e4d] dark:text-[#c49a92] mb-6">
+                Are you sure you want to cancel this booking? This action cannot be undone.
+              </p>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setCancelBookingId(null)}
+                  className="flex-1 py-3 rounded-xl font-semibold text-[#703e2d] dark:text-[#c49a92] hover:bg-[#f0b8a8] dark:hover:bg-[#344840] transition-colors"
+                >
+                  Keep Booking
+                </button>
+                <button
+                  onClick={() => handleCancelBooking(cancelBookingId)}
+                  disabled={isCancelling}
+                  className="flex-1 py-3 rounded-xl font-bold bg-[#d3513e] hover:bg-[#c04633] text-white disabled:opacity-70 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isCancelling ? 'Cancelling...' : 'Confirm Cancel'}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </main>

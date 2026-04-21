@@ -178,4 +178,86 @@ impl SmtpMailer {
         tracing::info!("Login success email sent to {}", to);
         Ok(())
     }
+
+    /// Send a booking confirmation email (best-effort; won't fail the booking).
+    pub async fn send_booking_confirmation_email(
+        &self,
+        to: &str,
+        user_name: &str,
+        resource_name: &str,
+        start_time: &str,
+        end_time: &str,
+        purpose: &str,
+    ) -> Result<(), String> {
+        if !self.rate_limiter.check_and_increment() {
+            tracing::warn!("Rate limited: skipping booking confirmation email for {}", to);
+            return Ok(()); // best-effort
+        }
+
+        let html_body = format!(
+            r#"<!DOCTYPE html>
+<html><head><style>
+    body {{ font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f9; margin: 0; padding: 20px; }}
+    .container {{ max-width: 480px; margin: 0 auto; background: #fff; border-radius: 12px;
+                  box-shadow: 0 2px 12px rgba(0,0,0,0.08); overflow: hidden; }}
+    .header {{ background: linear-gradient(135deg, #ef6751 0%, #d3513e 100%);
+               padding: 32px 24px; text-align: center; }}
+    .header h1 {{ color: #fff; margin: 0; font-size: 24px; }}
+    .body {{ padding: 32px 24px; }}
+    .detail {{ display: flex; justify-content: space-between; padding: 12px 0;
+               border-bottom: 1px solid #eee; }}
+    .detail-label {{ color: #888; font-size: 14px; }}
+    .detail-value {{ color: #333; font-weight: 600; font-size: 14px; }}
+    .footer {{ padding: 16px 24px; text-align: center; color: #888; font-size: 13px;
+               border-top: 1px solid #eee; }}
+</style></head>
+<body>
+<div class="container">
+    <div class="header"><h1>Booking Confirmed ✓</h1></div>
+    <div class="body">
+        <p>Hi <strong>{user_name}</strong>,</p>
+        <p>Your booking has been successfully created!</p>
+        <div style="margin: 24px 0;">
+            <div class="detail">
+                <span class="detail-label">Resource</span>
+                <span class="detail-value">{resource_name}</span>
+            </div>
+            <div class="detail">
+                <span class="detail-label">Start</span>
+                <span class="detail-value">{start_time}</span>
+            </div>
+            <div class="detail">
+                <span class="detail-label">End</span>
+                <span class="detail-value">{end_time}</span>
+            </div>
+            <div class="detail">
+                <span class="detail-label">Purpose</span>
+                <span class="detail-value">{purpose}</span>
+            </div>
+        </div>
+        <p style="color:#666;font-size:14px;">
+            Your booking is pending admin approval. You'll be notified once it's approved.
+        </p>
+    </div>
+    <div class="footer">CampusFlow — Campus Resource Management</div>
+</div>
+</body></html>"#
+        );
+
+        let email = Message::builder()
+            .from(self.from.parse().map_err(|e| format!("Invalid from: {}", e))?)
+            .to(to.parse().map_err(|e| format!("Invalid to: {}", e))?)
+            .subject("CampusFlow — Booking Confirmation")
+            .header(ContentType::TEXT_HTML)
+            .body(html_body)
+            .map_err(|e| format!("Failed to build email: {}", e))?;
+
+        self.transport
+            .send(email)
+            .await
+            .map_err(|e| format!("Failed to send email: {}", e))?;
+
+        tracing::info!("Booking confirmation email sent to {}", to);
+        Ok(())
+    }
 }

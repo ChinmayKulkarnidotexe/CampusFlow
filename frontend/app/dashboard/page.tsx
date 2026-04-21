@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/hooks/authContext';
-import { PhysicalResource, resourceApi, bookingApi, CreateBookingRequest } from '@/app/lib/api';
+import { PhysicalResource, resourceApi, bookingApi, CreateBookingRequest, Booking } from '@/app/lib/api';
 
 // Convert backend resource type to frontend category
 const mapResourceTypeToCategory = (resourceType: string): string => {
@@ -31,14 +31,35 @@ function calculateDuration(start: string, end: string): number {
 }
 
 export default function DashboardPage() {
-  const { user, accessToken, isAuthenticated, isLoading: authLoading, refreshToken } = useAuth();
+  const { user, accessToken, isAuthenticated, isLoading: authLoading } = useAuth();
   const [activeCategory, setActiveCategory] = useState('All');
   const [resources, setResources] = useState<PhysicalResource[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [bookingModal, setBookingModal] = useState<{ show: boolean; resource?: PhysicalResource }>({ show: false });
-  const [bookingDetails, setBookingDetails] = useState({ date: '', startTime: '09:00', endTime: '10:00' });
+  const [bookingDetails, setBookingDetails] = useState({ date: '', startTime: '09:00', endTime: '10:00', purpose: '' });
   const [isBooking, setIsBooking] = useState(false);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [existingBookings, setExistingBookings] = useState<Booking[]>([]);
+  const [totalBookings, setTotalBookings] = useState(0);
+
+  // Fetch user's booking count
+  useEffect(() => {
+    if (accessToken) {
+      bookingApi.listBookings(accessToken).then(d => setTotalBookings(d.bookings?.length || 0)).catch(() => {});
+    }
+  }, [accessToken]);
+
+  // Fetch availability when date or resource changes
+  useEffect(() => {
+    if (bookingModal.resource && bookingDetails.date) {
+      bookingApi.getResourceAvailability(bookingModal.resource.resource_id, bookingDetails.date)
+        .then(d => setExistingBookings(d.bookings || []))
+        .catch(() => setExistingBookings([]));
+    } else {
+      setExistingBookings([]);
+    }
+  }, [bookingModal.resource, bookingDetails.date]);
 
   // Fetch resources on mount
   useEffect(() => {
@@ -95,18 +116,19 @@ export default function DashboardPage() {
         resource_id: bookingModal.resource!.resource_id,
         start_time: formatNaive(startDateTime),
         end_time: formatNaive(endDateTime),
-        purpose: `Booking for ${mapResourceTypeToCategory(bookingModal.resource!.resource_type)}`,
+        purpose: bookingDetails.purpose || `Booking for ${mapResourceTypeToCategory(bookingModal.resource!.resource_type)}`,
       };
 
-      const data = await bookingApi.createBooking(bookingData, accessToken);
+      await bookingApi.createBooking(bookingData, accessToken);
 
-      // Refresh resources after booking
       const updatedResources = await resourceApi.listResources();
       setResources(updatedResources.resources || []);
+      setTotalBookings(prev => prev + 1);
 
       setBookingModal({ show: false });
-      setBookingDetails({ date: '', startTime: '09:00', endTime: '10:00' });
-      alert('Booking confirmed! Check your email for details.');
+      setBookingDetails({ date: '', startTime: '09:00', endTime: '10:00', purpose: '' });
+      setSuccessMsg('Booking confirmed! Check your email for details.');
+      setTimeout(() => setSuccessMsg(null), 5000);
     } catch (err: any) {
       setError(err.message || 'Failed to create booking');
       console.error('Booking error:', err);
@@ -136,6 +158,7 @@ export default function DashboardPage() {
             <div>
               <h1 className="text-4xl md:text-5xl font-bold mb-4">My Dashboard</h1>
               <p className="text-white/90 text-lg">Manage your bookings and explore available resources</p>
+              <Link href="/dashboard/bookings" className="mt-3 inline-flex items-center gap-2 px-5 py-2 bg-white/20 hover:bg-white/30 rounded-full text-white text-sm font-semibold transition-all">📅 My Bookings</Link>
             </div>
             <div className="flex items-center gap-4 bg-white/20 dark:bg-black/20 backdrop-blur-md px-6 py-3 rounded-2xl">
               <div className="text-right">
@@ -159,10 +182,10 @@ export default function DashboardPage() {
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
           {[
-            { label: 'Total Bookings', value: '24', icon: 'calendar' },
-            { label: 'Hours Used', value: '156', icon: 'clock' },
-            { label: 'Labs Visited', value: '8', icon: 'lab' },
-            { label: 'Equipment Used', value: '12', icon: 'equipment' },
+            { label: 'My Bookings', value: String(totalBookings), icon: 'calendar' },
+            { label: 'Available', value: String(resources.filter(r => r.status === 'available').length), icon: 'clock' },
+            { label: 'Total Resources', value: String(resources.length), icon: 'lab' },
+            { label: 'Categories', value: String(new Set(resources.map(r => mapResourceTypeToCategory(r.resource_type))).size), icon: 'equipment' },
           ].map((stat, idx) => (
             <div key={idx} className="bg-white dark:bg-[#26352f] p-6 rounded-2xl shadow-sm border border-[#f0b8a8]/30 dark:border-[#344840]/30">
               <div className="flex items-center justify-between mb-3">
@@ -178,6 +201,15 @@ export default function DashboardPage() {
             </div>
           ))}
         </div>
+
+        {/* Success Toast */}
+        {successMsg && (
+          <div className="mb-6 p-4 bg-green-500/10 border border-green-500/30 rounded-xl flex items-center gap-3 animate-fade-in">
+            <span className="text-green-600 text-lg">✓</span>
+            <p className="text-green-700 dark:text-green-400 font-medium text-sm">{successMsg}</p>
+            <button onClick={() => setSuccessMsg(null)} className="ml-auto text-green-600 hover:text-green-800">✕</button>
+          </div>
+        )}
 
         {/* Error Message */}
         {error && (
@@ -356,6 +388,38 @@ export default function DashboardPage() {
                     />
                   </div>
                 </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-[#703e2d] dark:text-[#e8f2ea] mb-2">Purpose</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Lab session, Meeting, Workshop..."
+                    className="w-full px-4 py-3 rounded-xl bg-[#f8f0e8] dark:bg-[#1e2a25] border border-[#f0b8a8] dark:border-[#344840] text-[#703e2d] dark:text-[#e8f2ea] focus:ring-2 focus:ring-[#ef6751] focus:border-transparent outline-none transition-all"
+                    value={bookingDetails.purpose}
+                    onChange={(e) => setBookingDetails({ ...bookingDetails, purpose: e.target.value })}
+                  />
+                </div>
+
+                {/* Existing bookings for this date */}
+                {bookingDetails.date && existingBookings.length > 0 && (
+                  <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300/40 dark:border-yellow-700/30 rounded-xl">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-yellow-700 dark:text-yellow-400 mb-2">Booked Slots on {bookingDetails.date}</h4>
+                    <div className="space-y-1">
+                      {existingBookings.map((b) => (
+                        <div key={b.booking_id} className="flex items-center gap-2 text-xs text-yellow-800 dark:text-yellow-300">
+                          <span className="w-2 h-2 rounded-full bg-yellow-500" />
+                          {new Date(b.start_time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} – {new Date(b.end_time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}
+                          {b.purpose && <span className="text-yellow-600 dark:text-yellow-500">({b.purpose})</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {bookingDetails.date && existingBookings.length === 0 && (
+                  <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-300/40 dark:border-green-700/30 rounded-xl">
+                    <p className="text-xs font-medium text-green-700 dark:text-green-400">✓ No existing bookings on {bookingDetails.date}. All time slots are available.</p>
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between pt-4 border-t border-[#f0b8a8]/30 dark:border-[#344840]/30">
                   <div className="text-sm text-[#8b5e4d] dark:text-[#a8cbb8]">

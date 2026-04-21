@@ -60,6 +60,13 @@ export default function SigninPage() {
     return isValid;
   };
 
+  // Detect OTP requirement via state change (React batching fix)
+  useEffect(() => {
+    if (requiresOTP) {
+      setShowOTPInput(true);
+    }
+  }, [requiresOTP]);
+
   const handleEmailPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({ email: '', password: '', otp: '', general: '' });
@@ -68,10 +75,7 @@ export default function SigninPage() {
 
     try {
       await login(email, password);
-      // If login succeeded but OTP is required, show OTP input
-      if (requiresOTP) {
-        setShowOTPInput(true);
-      }
+      // OTP transition is handled by the useEffect above
     } catch {
       // Error is already set in the auth context
     }

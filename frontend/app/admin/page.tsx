@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/hooks/authContext';
-import { bookingApi, type PhysicalResource, resourceApi } from '@/app/lib/api';
+import { bookingApi, type PhysicalResource, resourceApi, userApi } from '@/app/lib/api';
 
 interface BookingWithDetails {
   booking_id: number;
@@ -96,11 +96,8 @@ export default function AdminDashboardPage() {
     setIsLoadingUsers(true);
     setError(null);
     try {
-      const data = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/users`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      const result = await data.json();
-      setUsers(result.users || []);
+      const data = await userApi.listUsers(accessToken);
+      setUsers(data.users || []);
     } catch (err: any) {
       setError('Failed to load users');
     } finally {
@@ -111,7 +108,7 @@ export default function AdminDashboardPage() {
   const handleApprove = async (bookingId: number) => {
     setError(null);
     try {
-      await bookingApi.updateBooking(bookingId, { booking_status: 'approved' }, user?.accessToken || '');
+      await bookingApi.updateBooking(bookingId, { booking_status: 'approved' }, accessToken || '');
       fetchBookings();
     } catch (err: any) {
       setError('Failed to approve booking');
@@ -121,7 +118,7 @@ export default function AdminDashboardPage() {
   const handleReject = async (bookingId: number) => {
     setError(null);
     try {
-      await bookingApi.updateBooking(bookingId, { booking_status: 'rejected' }, user?.accessToken || '');
+      await bookingApi.updateBooking(bookingId, { booking_status: 'rejected' }, accessToken || '');
       fetchBookings();
     } catch (err: any) {
       setError('Failed to reject booking');
@@ -131,7 +128,7 @@ export default function AdminDashboardPage() {
   const handleDelete = async (bookingId: number) => {
     setError(null);
     try {
-      await bookingApi.cancelBooking(bookingId, user?.accessToken || '');
+      await bookingApi.cancelBooking(bookingId, accessToken || '');
       fetchBookings();
     } catch (err: any) {
       setError('Failed to delete booking');

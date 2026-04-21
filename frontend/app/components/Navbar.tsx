@@ -19,10 +19,10 @@ export default function Navbar() {
   }, []);
 
   const navLinks = [
-    { name: 'Home', href: '#' },
-    { name: 'Resources', href: '#resources' },
-    { name: 'About', href: '#about' },
-    { name: 'Contact', href: '#contact' },
+    { name: 'Home', href: '/' },
+    { name: 'Resources', href: '/resources' },
+    { name: 'About', href: '/about' },
+    { name: 'Contact', href: '/contact' },
   ];
 
   const handleLogout = () => {
@@ -84,6 +84,12 @@ export default function Navbar() {
                 className="px-6 py-3.5 rounded-full bg-[#ef6751] hover:bg-[#d3513e] text-white font-semibold text-base transition-all duration-200 hover:shadow-xl hover:shadow-[#ef6751]/20"
               >
                 Dashboard
+              </Link>
+              <Link
+                href="/dashboard/bookings"
+                className="px-6 py-3.5 rounded-full hover:bg-[#f0b8a8] dark:hover:bg-[#3a1520] text-[#703e2d] dark:text-[#c49a92] font-semibold text-base transition-all duration-200"
+              >
+                My Bookings
               </Link>
               <button
                 onClick={handleLogout}

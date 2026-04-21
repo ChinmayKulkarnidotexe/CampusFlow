@@ -31,7 +31,7 @@ interface AuthContextType {
   verifyOTP: (email: string, otpCode: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
-  refreshToken: () => Promise<void>;
+  refreshAccessToken: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -258,7 +258,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     verifyOTP,
     register,
     logout,
-    refreshToken: refreshTokenAPI,
+    refreshAccessToken: refreshTokenAPI,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

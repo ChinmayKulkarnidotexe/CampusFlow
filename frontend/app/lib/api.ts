@@ -6,16 +6,16 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 // ── Request helpers ────────────────────────────────────────────────────────
 
-interface RequestOptions extends RequestInit {
+interface RequestOptions extends Omit<RequestInit, 'body'> {
   token?: string;
-  body?: Record<string, unknown> | FormData;
+  body?: Record<string, unknown> | FormData | object;
 }
 
 async function request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const { token, body, ...rest } = options;
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...rest.headers,
+    ...(rest.headers as Record<string, string>),
   };
 
   if (token) {
@@ -35,7 +35,7 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `Request failed with status ${response.status}`);
+    throw new Error(errorData.error || errorData.message || `Request failed with status ${response.status}`);
   }
 
   return response.json();
@@ -217,6 +217,14 @@ export const bookingApi = {
       token,
     });
   },
+
+  // Get availability for a resource on a specific date
+  getResourceAvailability: async (resourceId: number, date: string) => {
+    return request<{ bookings: Booking[]; date: string }>(
+      `/bookings/resource/${resourceId}/availability?date=${date}`,
+      { method: 'GET' }
+    );
+  },
 };
 
 // ── Physical Resources API ────────────────────────────────────────────────
@@ -244,17 +252,19 @@ export interface PhysicalResourceQuery {
 
 export const resourceApi = {
   // List all resources - public endpoint, but admin can manage
-  listResources: async (params?: PhysicalResourceQuery) => {
+  listResources: async (params?: PhysicalResourceQuery, token?: string) => {
     const query = params ? new URLSearchParams(params as Record<string, string>) : undefined;
     return request<{ resources: PhysicalResource[] }>(`/physical-resources${query ? '?' + query.toString() : ''}`, {
       method: 'GET',
+      ...(token ? { token } : {}),
     });
   },
 
   // Get single resource
-  getResource: async (id: number) => {
+  getResource: async (id: number, token?: string) => {
     return request<{ resource: PhysicalResource }>(`/physical-resources/${id}`, {
       method: 'GET',
+      ...(token ? { token } : {}),
     });
   },
 

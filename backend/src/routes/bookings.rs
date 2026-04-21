@@ -16,6 +16,7 @@ pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/", get(list_bookings).post(create_booking))
         .route("/:id", get(get_booking).put(update_booking).delete(cancel_booking))
+        .route("/resource/:id/availability", get(get_resource_availability))
 }
 
 // ── GET /api/bookings ────────────────────────────────────────────────────
@@ -128,6 +129,43 @@ async fn create_booking(
     .fetch_one(&state.db)
     .await?;
 
+    // ── Best-effort confirmation email ────────────────────────────────
+    if let Some(mailer) = &state.mailer {
+        // Look up user email + name and resource name
+        let user_row = sqlx::query_as::<_, (String, String)>(
+            "SELECT email, full_name FROM users WHERE user_id = $1",
+        )
+        .bind(auth.user_id)
+        .fetch_optional(&state.db)
+        .await
+        .ok()
+        .flatten();
+
+        let resource_name = sqlx::query_scalar::<_, String>(
+            "SELECT resource_name FROM physical_resources WHERE resource_id = $1",
+        )
+        .bind(payload.resource_id)
+        .fetch_optional(&state.db)
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| format!("Resource #{}", payload.resource_id));
+
+        if let Some((email, name)) = user_row {
+            let start_str = booking.start_time.format("%Y-%m-%d %H:%M").to_string();
+            let end_str = booking.end_time.format("%Y-%m-%d %H:%M").to_string();
+            let purpose = booking.purpose.as_deref().unwrap_or("Not specified");
+            if let Err(e) = mailer
+                .send_booking_confirmation_email(
+                    &email, &name, &resource_name, &start_str, &end_str, purpose,
+                )
+                .await
+            {
+                tracing::warn!("Failed to send booking confirmation email: {}", e);
+            }
+        }
+    }
+
     Ok((StatusCode::CREATED, Json(json!({ "booking": booking }))))
 }
 
@@ -200,4 +238,43 @@ async fn cancel_booking(
     .await?;
 
     Ok(Json(json!({ "booking": updated })))
+}
+
+// ── GET /api/bookings/resource/:id/availability?date=YYYY-MM-DD ──────────
+
+#[derive(Debug, serde::Deserialize)]
+struct AvailabilityQuery {
+    date: Option<String>, // YYYY-MM-DD
+}
+
+async fn get_resource_availability(
+    State(state): State<Arc<AppState>>,
+    Path(resource_id): Path<i32>,
+    Query(params): Query<AvailabilityQuery>,
+) -> Result<Json<Value>, AppError> {
+    // Default to today if no date is provided
+    let date_str = params.date.unwrap_or_else(|| {
+        chrono::Local::now().format("%Y-%m-%d").to_string()
+    });
+
+    let date = chrono::NaiveDate::parse_from_str(&date_str, "%Y-%m-%d")
+        .map_err(|_| AppError::BadRequest("Invalid date format, use YYYY-MM-DD".to_string()))?;
+
+    let day_start = date.and_hms_opt(0, 0, 0).unwrap();
+    let day_end = date.and_hms_opt(23, 59, 59).unwrap();
+
+    let bookings = sqlx::query_as::<_, Booking>(
+        "SELECT booking_id, user_id, resource_id, start_time, end_time, \
+         booking_status, purpose FROM bookings \
+         WHERE resource_id = $1 AND booking_status != 'cancelled' \
+         AND start_time < $3 AND end_time > $2 \
+         ORDER BY start_time ASC",
+    )
+    .bind(resource_id)
+    .bind(day_start)
+    .bind(day_end)
+    .fetch_all(&state.db)
+    .await?;
+
+    Ok(Json(json!({ "bookings": bookings, "date": date_str })))
 }
